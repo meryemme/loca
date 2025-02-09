@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Geolocation with Buffer Zone - OSM</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+    <style>
+        #map {
+            height: 100vh;
+            width: 100vw;
+        }
+    </style>
+</head>
+<body>
+    <input id="pac-input" type="text" placeholder="Enter a place">
+    <div id="map"></div>
+
+    <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+    <script src="https://unpkg.com/leaflet-geocoder/dist/leaflet-geocoder.js"></script>
+    <script>
+        let map;
+        let personMarker;
+        let bufferCircle;
+        let currentPosition;
+        let watchID;
+
+        // Zone buffer (to be adjusted based on your needs)
+        const bufferRadius = 2;  // Buffer zone radius in meters
+
+        function initMap() {
+            // Initialize the map with a default center (Morocco for example)
+            map = L.map('map').setView([31.7917, -7.0926], 6);  // Default position: Morocco
+
+            // Add OpenStreetMap tile layer
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+            }).addTo(map);
+
+            // Start the geolocation tracking
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(function(position) {
+                    currentPosition = [position.coords.latitude, position.coords.longitude];
+                    personMarker = L.marker(currentPosition).addTo(map)
+                        .bindPopup('Your position')
+                        .openPopup();
+                    map.setView(currentPosition, 17);  // Zoom into the user's position
+
+                    // Create a buffer zone around the current position
+                    bufferCircle = L.circle(currentPosition, {
+                        color: 'red',
+                        fillColor: '#ff0000',
+                        fillOpacity: 0.2,
+                        radius: bufferRadius
+                    }).addTo(map);
+
+                    // Start tracking the position
+                    watchPosition();
+                });
+            } else {
+                alert("Geolocation is not supported by your browser.");
+            }
+        }
+
+        // Function to track position in real-time
+        function watchPosition() {
+            watchID = navigator.geolocation.watchPosition(function(position) {
+                const newPosition = [position.coords.latitude, position.coords.longitude];
+                personMarker.setLatLng(newPosition);
+                map.setView(newPosition);
+
+                // Check if the person has left the buffer zone
+                checkBufferZone(newPosition);
+            });
+        }
+
+        // Function to check if the person is within the buffer zone
+        function checkBufferZone(position) {
+            const distance = map.distance(position, bufferCircle.getLatLng());
+            if (distance > bufferCircle.getRadius()) {
+                alert("Alert: You have left the buffer zone!");
+            }
+        }
+
+        // Function to stop tracking (optional)
+        function stopTracking() {
+            if (watchID) {
+                navigator.geolocation.clearWatch(watchID);
+                alert("Tracking stopped.");
+            }
+        }
+
+        // Initialize the map
+        initMap();
+    </script>
+</body>
+</html>

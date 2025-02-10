@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Géolocalisation en Temps Réel</title>
+</head>
+<body>
+    <h1>Test de Géolocalisation</h1>
+    <button onclick="getLocation()">Obtenir ma position</button>
+    <p id="position">Ma position : Non déterminée</p>
+
+    <script>
+        // Fonction pour récupérer la position
+        function getLocation() {
+            if (navigator.geolocation) {
+                // Demande la position
+                navigator.geolocation.getCurrentPosition(function(position) {
+                    // Récupérer la latitude et la longitude
+                    const latitude = position.coords.latitude;
+                    const longitude = position.coords.longitude;
+
+                    // Afficher la position dans la page HTML
+                    document.getElementById('position').innerText = `Latitude: ${latitude}, Longitude: ${longitude}`;
+
+                    // Envoi des données vers l'API de votre serveur ngrok
+                    fetch('https://ac5b-105-67-0-11.ngrok-free.app/api/location', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({
+                            latitude: latitude,
+                            longitude: longitude
+                        })
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        console.log('Données envoyées:', data);  // Traitement de la réponse
+                    })
+                    .catch(error => {
+                        console.error('Erreur lors de l\'envoi des données:', error);
+                    });
+                }, function(error) {
+                    alert('Erreur de géolocalisation: ' + error.message);
+                });
+            } else {
+                alert('La géolocalisation n\'est pas supportée par ce navigateur.');
+            }
+        }
+    </script>
+</body>
+</html>

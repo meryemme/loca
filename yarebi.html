@@ -3,66 +3,68 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Géolocalisation en Temps Réel</title>
+    <title>Test GPS + OpenCage</title>
 </head>
 <body>
-    <h1>Suivi de ma position</h1>
+    <h1>Test de Géolocalisation</h1>
     <p id="position">Attente de la position...</p>
+    <p id="adresse">Adresse: En attente...</p>
 
     <script>
-        const apiKey = "79c4ee0bdb594c318831cd21bad55f22"; // Remplace par ta clé OpenCage
-        const serverUrl = "http://localhost:3000/position"; // Remplace par l'URL de ton serveur
+        const apiKey = "79c4ee0bdb594c318831cd21bad55f22"; // Remplace avec ta clé OpenCage
 
         function getLocation() {
             if (navigator.geolocation) {
-                navigator.geolocation.watchPosition(sendPosition, showError, {
+                navigator.geolocation.watchPosition(showPosition, showError, {
                     enableHighAccuracy: true,
                     maximumAge: 0
                 });
             } else {
-                alert("La géolocalisation n'est pas supportée par ce navigateur.");
+                document.getElementById("position").innerHTML = "Géolocalisation non supportée.";
             }
         }
 
-        async function sendPosition(position) {
-            const latitude = position.coords.latitude;
-            const longitude = position.coords.longitude;
+        function showPosition(position) {
+            const lat = position.coords.latitude;
+            const lon = position.coords.longitude;
+            document.getElementById("position").innerHTML = `Latitude: ${lat} <br> Longitude: ${lon}`;
 
-            // Récupérer l'adresse avec OpenCage
-            const adresse = await getAddress(latitude, longitude);
-
-            // Envoyer les données au serveur
-            fetch(serverUrl, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ latitude, longitude, adresse })
-            })
-            .then(response => response.json())
-            .then(data => {
-                document.getElementById("position").innerHTML = 
-                    `Latitude: ${latitude} <br> Longitude: ${longitude} <br> Adresse: ${adresse}`;
-                console.log("Position envoyée:", data);
-            })
-            .catch(error => console.error("Erreur lors de l'envoi:", error));
-        }
-
-        async function getAddress(lat, lon) {
-            const url = `https://api.opencagedata.com/geocode/v1/json?q=${lat}+${lon}&key=${apiKey}`;
-            try {
-                const response = await fetch(url);
-                const data = await response.json();
-                return data.results[0]?.formatted || "Adresse inconnue";
-            } catch (error) {
-                console.error("Erreur de géocodage:", error);
-                return "Adresse indisponible";
-            }
+            // Appel à OpenCage API
+            fetch(`https://api.opencagedata.com/geocode/v1/json?q=${lat}+${lon}&key=${apiKey}`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.results.length > 0) {
+                        document.getElementById("adresse").innerHTML = "Adresse: " + data.results[0].formatted;
+                    } else {
+                        document.getElementById("adresse").innerHTML = "Adresse: Non trouvée";
+                    }
+                })
+                .catch(error => {
+                    console.error("Erreur OpenCage:", error);
+                    document.getElementById("adresse").innerHTML = "Erreur OpenCage.";
+                });
         }
 
         function showError(error) {
-            console.error("Erreur de localisation:", error);
+            let message = "";
+            switch(error.code) {
+                case error.PERMISSION_DENIED:
+                    message = "L'utilisateur a refusé la demande de géolocalisation.";
+                    break;
+                case error.POSITION_UNAVAILABLE:
+                    message = "L'information de position est indisponible.";
+                    break;
+                case error.TIMEOUT:
+                    message = "La demande de géolocalisation a expiré.";
+                    break;
+                case error.UNKNOWN_ERROR:
+                    message = "Une erreur inconnue s'est produite.";
+                    break;
+            }
+            document.getElementById("position").innerHTML = "Erreur: " + message;
+            console.error("Erreur de géolocalisation:", error);
         }
 
-        // Démarrer la géolocalisation
         getLocation();
     </script>
 </body>

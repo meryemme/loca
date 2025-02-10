@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Géolocalisation en Temps Réel</title>
+</head>
+<body>
+    <h1>Suivi de ma position</h1>
+    <p id="position">Attente de la position...</p>
+
+    <script>
+        const apiKey = "79c4ee0bdb594c318831cd21bad55f22"; // Remplace par ta clé OpenCage
+        const serverUrl = "http://localhost:3000/position"; // Remplace par l'URL de ton serveur
+
+        function getLocation() {
+            if (navigator.geolocation) {
+                navigator.geolocation.watchPosition(sendPosition, showError, {
+                    enableHighAccuracy: true,
+                    maximumAge: 0
+                });
+            } else {
+                alert("La géolocalisation n'est pas supportée par ce navigateur.");
+            }
+        }
+
+        async function sendPosition(position) {
+            const latitude = position.coords.latitude;
+            const longitude = position.coords.longitude;
+
+            // Récupérer l'adresse avec OpenCage
+            const adresse = await getAddress(latitude, longitude);
+
+            // Envoyer les données au serveur
+            fetch(serverUrl, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ latitude, longitude, adresse })
+            })
+            .then(response => response.json())
+            .then(data => {
+                document.getElementById("position").innerHTML = 
+                    `Latitude: ${latitude} <br> Longitude: ${longitude} <br> Adresse: ${adresse}`;
+                console.log("Position envoyée:", data);
+            })
+            .catch(error => console.error("Erreur lors de l'envoi:", error));
+        }
+
+        async function getAddress(lat, lon) {
+            const url = `https://api.opencagedata.com/geocode/v1/json?q=${lat}+${lon}&key=${apiKey}`;
+            try {
+                const response = await fetch(url);
+                const data = await response.json();
+                return data.results[0]?.formatted || "Adresse inconnue";
+            } catch (error) {
+                console.error("Erreur de géocodage:", error);
+                return "Adresse indisponible";
+            }
+        }
+
+        function showError(error) {
+            console.error("Erreur de localisation:", error);
+        }
+
+        // Démarrer la géolocalisation
+        getLocation();
+    </script>
+</body>
+</html>
